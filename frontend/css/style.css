@@ -5,7 +5,14 @@
 :root {
   --primary: #D4AF37; /* Amber Gold */
   --primary-glow: #F9D71C;
-  --bg-dark: #0F172A; /* Deep Slate */
+  --bg-dark: #0F172A; /* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+.modal-box { max-height: 90vh; overflow-y: auto; }
+.hero-scroll { max-height: 380px; overflow-y: auto; }
   --surface: #1E293B;
   --border-light: rgba(255, 255, 255, 0.05);
   --text-main: #F1F5F9;

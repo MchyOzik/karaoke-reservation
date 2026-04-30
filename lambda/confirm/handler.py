@@ -26,7 +26,7 @@ def lambda_handler(event, context):
         with conn.cursor() as cur:
             cur.execute(
                 "UPDATE bookings SET status = 'confirmed', payment_proof_url = %s WHERE id = %s",
-                (f"s3://{os.environ['S3_PAYMENT_BUCKET']}/{s3_key}", booking_id)
+                (f"s3://{os.environ['S3_BUCKET']}/{s3_key}", booking_id)
             )
         conn.commit()
         conn.close()

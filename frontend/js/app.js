@@ -1,16 +1,16 @@
 const App = {
-  apiUrl: (window.APP_CONFIG && window.APP_CONFIG.API_GATEWAY_URL) || localStorage.getItem('neonstage_api_url') || '',
+  apiUrl: localStorage.getItem('neonstage_api_url') || (window.APP_CONFIG && window.APP_CONFIG.API_GATEWAY_URL !== '__API_GATEWAY_URL__' ? window.APP_CONFIG.API_GATEWAY_URL : ''),
   rooms: [],
 
   init() {
     this.bindEvents();
     this.initParticles();
     
-    if (this.apiUrl && !this.apiUrl.includes('xxxx')) {
+    if (this.apiUrl) {
       this.fetchRooms();
       this.fetchSchedule();
     } else {
-      setTimeout(() => App.openSettings(), 1500);
+      setTimeout(() => this.openSettings(), 1000);
     }
     
     // Auto refresh schedule every 30s
@@ -65,24 +65,10 @@ const App = {
   },
 
   async fetchSchedule() {
-    const grid = document.getElementById('schedule-grid');
-    const heroList = document.getElementById('hero-upcoming-list');
     if (!this.apiUrl) return;
     try {
       const res = await fetch(`${this.apiUrl}/status`);
       const data = await res.json();
-      
-      if (!data.bookings || data.bookings.length === 0) {
-        grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500 italic">No bookings found for today.</div>';
-        heroList.innerHTML = '<div class="text-center py-20 text-slate-500 italic text-sm">Waiting for the first superstar...</div>';
-        return;
-      }
-
-      // Render Dashboard Grid
-      grid.innerHTML = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">' + data.bookings.map(b => `
-        <div class="glass-panel p-6 rounded-xl border-l-2 ${b.status.includes('✅') ? 'border-l-green-500' : 'border-l-brand-primary'}">
-          <div class="inline-block px-2 py-0.5 rounded text-[9px] font-bold mb-4 ${b.status.includes('✅') ? 'bg-green-500/10 text-green-400' : 'bg-brand-primary/10 text-brand-primary'} uppercase">${b.status.includes('✅') ? 'Confirmed' : 'Pending'}</div>
-          <div class="text-xl font-bold mb-1">${b.start_time.substring(0,5)} - ${b.end_time.substring(0,5)}</div>
           <div class="text-slate-400 text-xs mb-4">${b.room_name}</div>
           <div class="flex items-center gap-2 border-t border-white/5 pt-4">
             <div class="text-xs font-bold text-slate-300">${b.alias}</div>
