@@ -85,6 +85,8 @@ The architecture emphasizes **Operational Resilience**, **Granular Observability
 | **Web OS** | Amazon Linux 2023 |
 | **Architecture** | 6-Subnet Hybrid Serverless |
 
+The system uses a **Client-Side Dynamic Configuration** strategy. API Gateway endpoints and S3 Bucket names are managed directly via the frontend "Settings" modal (stored in LocalStorage) to ensure portability across different deployment stages without re-building the frontend.
+
 ---
 
 ## 3. Implementation: Networking & Infrastructure (Stack 1)
