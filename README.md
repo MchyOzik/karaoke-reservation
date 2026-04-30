@@ -109,7 +109,17 @@ The network foundation is segmented into 3 security zones across 2 Availability 
 - **karaoke-db-2**: 35.10.22.0/25 (AZ-B)
 *Hosts: RDS PostgreSQL.*
 
-### 3.2. Compute Layer: EC2 & ALB Specification
+### 3.2. Security Group Matrix (Inbound Rules)
+To ensure zero-trust security, the following security groups must be configured:
+
+| Security Group Name | Port | Source | Description |
+| :--- | :--- | :--- | :--- |
+| **`karaoke-sg-alb`** | 80 | `0.0.0.0/0` | Public HTTP access to Load Balancer |
+| **`karaoke-sg-web`** | 80 | `karaoke-sg-alb` | Restricts web traffic to ALB only |
+| **`karaoke-sg-lambda`** | - | - | Egress-only for database/API access |
+| **`karaoke-sg-rds`** | 5432 | `karaoke-sg-lambda` | DB access restricted to application logic |
+
+### 3.3. Compute Layer: EC2 & ALB Specification
 
 #### Application Load Balancer
 - **Name**: `karaoke-alb`
@@ -153,95 +163,56 @@ echo "NeonStage System Online" > /var/www/html/health.html
 
 ## 4. Implementation: Database Layer (Stack 2)
 
-### 4.1. RDS PostgreSQL 15
-- **Engine**: PostgreSQL 15
+### 4.1. RDS PostgreSQL 15 (Stack 2)
+- **DB Instance Identifier**: `karaoke-rds-postgres`
+- **Database Name**: `karaokedb`
+- **Master Username**: `dbadmin` (Default)
+- **Master Password**: `SecurePass123!` (Default)
+- **Engine**: PostgreSQL 15 (Free Tier compatible: `db.t3.micro`)
 - **Storage**: 20GB gp2
 - **Security Group**: `karaoke-sg-rds` (Inbound 5432 ONLY from `karaoke-sg-lambda`)
+- **DB Subnet Group Name**: `karaoke-db-subnet-group`
+- **DB Subnet Group Subnets**: Must be created using the **Isolated Zone** subnets (`karaoke-db-1` and `karaoke-db-2`). 
+  > [!IMPORTANT]
+  > Do NOT use the VPC public or private subnets for the RDS Subnet Group. Use only the subnets designated for the Data Zone.
 
 ### 4.2. DynamoDB Atomic Locking
 - **Table Name**: `karaoke-reservation-session-locks`
+- **Region**: `us-east-1`
+- **Billing Mode**: `On-Demand (PAY_PER_REQUEST)`
 - **PK**: `lock_id` (String)
-- **TTL**: `expires_at` (Attribute for automatic lock expiration)
+- **TTL Attribute**: `expires_at` (Number/Epoch)
 
 ---
 
 ## 5. Backend Logic (AWS Lambda) - Python 3.12
 
 ### 5.1. Global Lambda Configuration
-| Parameter | Default |
+| Parameter | Value |
 | :--- | :--- |
 | **Runtime** | Python 3.12 |
+| **Layer Name** | `karaoke-layer` |
+| **VPC Config** | Attach to `karaoke-private-1` & `karaoke-private-2` |
 
-### 5.2. Function-Specific Sizing & Environment
+### 5.2. Function Configuration Matrix
 
-#### 5.2.1. karaoke-lambda-rooms (Fetch Rooms)
-- **Memory**: 128 MB
-- **Timeout**: 15s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `DB_NAME` | `karaokedb` |
-| `DB_USER` | `dbadmin` |
-| `DB_PASS` | `SecurePass123!` |
-
-#### 5.2.2. karaoke-lambda-booking (Process Order)
-- **Memory**: 256 MB
-- **Timeout**: 30s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `DYNAMODB_TABLE` | `karaoke-reservation-session-locks` |
-
-#### 5.2.3. karaoke-lambda-status (Live Dashboard)
-- **Memory**: 128 MB
-- **Timeout**: 20s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `DYNAMODB_TABLE` | `karaoke-reservation-session-locks` |
-
-#### 5.2.4. karaoke-lambda-confirm (Finalize Payment)
-- **Memory**: 128 MB
-- **Timeout**: 30s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `S3_BUCKET` | [S3 Bucket Name] |
-| `DYNAMODB_TABLE` | `karaoke-reservation-session-locks` |
-
-#### 5.2.5. karaoke-lambda-presign (Upload URL Gen)
-- **Memory**: 128 MB
-- **Timeout**: 10s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `S3_BUCKET` | [S3 Bucket Name] |
-
-#### 5.2.6. karaoke-lambda-check-slot (Availability Check)
-- **Memory**: 128 MB
-- **Timeout**: 15s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `DYNAMODB_TABLE` | `karaoke-reservation-session-locks` |
-
-#### 5.2.7. karaoke-lambda-cleanup (Maintenance)
-- **Memory**: 128 MB
-- **Timeout**: 60s
-- **Environment Variables**:
-| Key | Value |
-| :--- | :--- |
-| `DB_HOST` | [RDS Endpoint] |
-| `DYNAMODB_TABLE` | `karaoke-reservation-session-locks` |
+| Function Name | Memory | Timeout | Environment Variables |
+| :--- | :--- | :--- | :--- |
+| `karaoke-rooms` | 128 MB | 15s | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` |
+| `karaoke-booking` | 256 MB | 30s | `DB_HOST`, `DYNAMODB_TABLE` |
+| `karaoke-status` | 128 MB | 20s | `DB_HOST`, `DYNAMODB_TABLE` |
+| `karaoke-confirm` | 128 MB | 30s | `DB_HOST`, `S3_BUCKET`, `DYNAMODB_TABLE` |
+| `karaoke-presign` | 128 MB | 10s | `S3_BUCKET` |
+| `karaoke-check-slot` | 128 MB | 15s | `DB_HOST`, `DYNAMODB_TABLE` |
 
 ---
 
+
 ## 6. API Gateway Interface
+- **API Name**: `karaoke-api`
+- **Protocol**: REST API
+- **Endpoint Type**: Regional
+- **Deployment Stage**: `prod`
 
 ### 6.1. Endpoint Documentation
 | Resource | Method | Lambda Integration | Logic Description |
@@ -258,7 +229,9 @@ echo "NeonStage System Online" > /var/www/html/health.html
 ## 7. Storage & Security
 
 ### 7.1. S3 Payment Proof Bucket
-### 7.1. S3 Payment Proof Bucket
+- **Bucket Name**: `karaoke-payment-proofs-[name]` (e.g., `karaoke-payment-proofs-cc-2026`)
+- **Region**: `us-east-1`
+
 **CORS Policy (Copy-Paste JSON):**
 ```json
 [
@@ -271,23 +244,39 @@ echo "NeonStage System Online" > /var/www/html/health.html
   }
 ]
 ```
-  
-### 7.2. S3 Bucket Policy (Public Access)
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "PublicReadGetObject",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::S3_BUCKET/*"
-        }
-    ]
-}
-```
-
 
 ---
+
+## 8. Deployment Orchestration (CloudFormation)
+
+The infrastructure is split into two logical stacks to ensure modularity and clean dependency management.
+
+### Step 1: Deploy Stack 1 (Core Infrastructure)
+- **Template**: `cloudformation/01-vpc-ec2-alb.yaml`
+- **Stack Name**: `karaoke-stack-1`
+- **What it creates**: VPC, 6 Subnets, NAT Gateway, ALB, and EC2 Web Server.
+- **Instructions**: 
+  1. Upload the template to AWS CloudFormation.
+  2. Wait for the status `CREATE_COMPLETE`.
+
+### Step 2: Deploy Stack 2 (Database Layer)
+- **Template**: `cloudformation/02-database-layer.yaml`
+- **Stack Name**: `karaoke-stack-2`
+- **What it creates**: RDS PostgreSQL Instance, RDS Subnet Group, and DynamoDB Table.
+- **Instructions**:
+  1. Ensure Stack 1 is fully deployed (it exports the required Subnet IDs).
+  2. Wait for `CREATE_COMPLETE`.
+
+### Step 3: Application Logic (Manual/CLI)
+1. **Lambda Layer**: 
+   - Prepare `layer.zip` containing `psycopg2` and utilities (see `lambda/README.md`).
+   - Create a Lambda Layer named `karaoke-layer` and upload the zip.
+2. **Lambda Functions**: 
+   - Deploy the 6 functions in the `lambda/` directory.
+   - Attach them to the Private Subnets of the VPC.
+   - Assign the `karaoke-lambda-sg` security group.
+   - Set the required Environment Variables as specified in Section 5.2.
+
+---
+
 © 2026 NeonStage System - All Technical Specifications Finalized.
