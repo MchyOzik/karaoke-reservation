@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeonStage — Karaoke Reservation</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+          colors: { brand: { bg: '#0F172A', primary: '#D4AF37', surface: '#1E293B', accent: '#F1F5F9' } }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="antialiased">
+
+<!-- ═══════════════════════ NAVBAR ════════════════════════════════════ -->
+<nav class="fixed top-0 left-0 w-full h-16 glass-nav z-50 flex items-center border-b border-white/5" style="background: rgba(15,23,42,0.9);">
+  <div class="w-[90%] max-w-7xl mx-auto flex justify-between items-center">
+    <a href="#" class="flex items-center gap-2 text-xl font-bold tracking-tight">
+      <span class="text-brand-primary">NeonStage</span>
+    </a>
+    <ul class="hidden md:flex items-center gap-8 text-sm font-medium">
+      <li><a href="#rooms" class="text-slate-400 hover:text-white">Rooms</a></li>
+      <li><a href="#dashboard" class="text-slate-400 hover:text-white">Live Status</a></li>
+      <li><button id="open-settings-btn" class="text-slate-400 hover:text-white">Settings</button></li>
+      <li><a href="#rooms" class="bg-brand-primary px-5 py-2 rounded font-bold text-black hover:opacity-90 transition-all">Book a Room</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ HERO ══════════════════════════════════════ -->
+<section class="relative min-h-screen flex items-center px-[5%] pt-16">
+  <div class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
+    <div>
+      <h1 class="text-5xl md:text-6xl font-bold leading-tight mb-6">
+        Private Rooms for <br><span class="text-brand-primary">Your Private Stage</span>
+      </h1>
+      <p class="text-lg text-slate-400 mb-10 max-w-lg">
+        Book your session, choose your playlist, and sing in a professionally tuned environment.
+      </p>
+      <div class="flex flex-wrap gap-4">
+        <button onclick="document.getElementById('rooms').scrollIntoView()" class="bg-brand-primary px-8 py-3.5 rounded font-bold text-black shadow-lg">
+          View Rooms
+        </button>
+        <button onclick="document.getElementById('dashboard').scrollIntoView()" class="px-8 py-3.5 rounded font-bold border border-white/10 text-white hover:bg-white/5">
+          View Schedule
+        </button>
+      </div>
+    </div>
+    
+    <div class="relative hidden lg:block h-[450px] w-full">
+      <div class="absolute inset-0 glass-panel rounded-2xl p-8 flex flex-col border border-white/10">
+        <div class="flex items-center justify-between mb-8">
+          <h3 class="text-lg font-bold">Upcoming Sessions</h3>
+          <div class="px-2 py-0.5 rounded bg-brand-primary/10 border border-brand-primary/20 text-[9px] font-bold text-brand-primary uppercase">Real-time</div>
+        </div>
+        <div class="flex-1 space-y-3 overflow-y-auto pr-2" id="hero-upcoming-list">
+          <div class="text-center py-20 text-slate-500 text-sm italic">Loading upcoming bookings...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ ROOMS ══════════════════════════════════════ -->
+<section class="py-24 px-[5%]" id="rooms">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-12">
+      <h2 class="text-3xl font-bold mb-2">Available Rooms</h2>
+      <p class="text-slate-400">Select a space that fits your group.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="rooms-grid"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ DASHBOARD ══════════════════════════════════ -->
+<section class="py-24 px-[5%] bg-brand-surface/30 border-y border-white/5" id="dashboard">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold mb-2">Today's Schedule</h2>
+      <p class="text-slate-400">Current room status and bookings.</p>
+    </div>
+    <div class="glass-panel p-8 rounded-2xl" id="schedule-grid"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ BOOKING MODAL ═════════════════════════════ -->
+<div class="modal-overlay" id="booking-overlay">
+  <div class="modal-box glass-panel max-w-xl w-full rounded-2xl p-8 relative">
+    <button class="absolute top-6 right-6 text-slate-400" onclick="Booking.closeModal()">✕</button>
+    
+    <div class="flex gap-4 mb-8">
+      <div class="flex-1 h-1 bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-brand-primary transition-all duration-500" id="line-1" style="width:0%"></div></div>
+      <div class="flex-1 h-1 bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-brand-primary transition-all duration-500" id="line-2" style="width:0%"></div></div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="booking-step" id="step-1">
+      <h3 class="text-xl font-bold mb-6">Select Date & Time</h3>
+      <div id="selected-room-info" class="mb-6"></div>
+      <input type="date" id="booking-date" class="form-input mb-6">
+      <div class="grid grid-cols-2 gap-8 mb-8">
+        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Check-in</label><div class="grid grid-cols-3 gap-2" id="start-slots"></div></div>
+        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Check-out</label><div class="grid grid-cols-3 gap-2" id="end-slots"></div></div>
+      </div>
+      <div id="price-preview" class="hide bg-white/5 p-4 rounded text-center mb-6 border border-white/5">
+        <span class="text-slate-400 text-xs">Estimated Total:</span>
+        <div class="text-xl font-bold text-brand-primary mt-1" id="price-value">0</div>
+      </div>
+      <div id="slot-status" class="text-red-400 text-xs text-center mb-6"></div>
+      <button class="bg-brand-primary w-full py-3 rounded font-bold text-black" id="step1-next-btn">Continue</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="booking-step hide" id="step-2">
+      <h3 class="text-xl font-bold mb-6">Customer Details</h3>
+      <div class="space-y-4 mb-8">
+        <input type="text" id="customer-name" class="form-input" placeholder="Full Name">
+        <input type="text" id="customer-alias" class="form-input" placeholder="Display Name (Optional)">
+        <input type="tel" id="customer-phone" class="form-input" placeholder="Phone Number">
+      </div>
+      <button class="bg-brand-primary w-full py-3 rounded font-bold text-black" id="step2-next-btn">Secure Slot</button>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="booking-step hide text-center" id="step-3">
+      <h3 class="text-xl font-bold mb-2">Payment Required</h3>
+      <p class="text-slate-400 text-sm mb-6">Your slot is temporarily held.</p>
+      <div class="text-2xl font-mono font-bold text-red-500 mb-8" id="timer-countdown">15:00</div>
+      <div class="border-2 border-dashed border-white/10 p-10 rounded-xl cursor-pointer hover:bg-white/5" id="upload-zone">
+        <p class="font-bold">Upload Transfer Receipt</p>
+        <p class="text-slate-500 text-xs mt-1">Click to select file (JPG, PNG, PDF)</p>
+        <input type="file" id="payment-file-input" accept=".jpg,.jpeg,.png,.pdf" hidden>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div class="booking-step hide text-center py-8" id="step-success">
+      <div class="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">✓</div>
+      <h3 class="text-2xl font-bold mb-2">Booking Confirmed</h3>
+      <p id="success-details" class="text-slate-400 text-sm mb-8">Our team will verify your payment shortly.</p>
+      <button class="bg-white text-black px-8 py-3 rounded font-bold" onclick="location.reload()">Finish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="modal-overlay" id="settings-overlay">
+  <div class="modal-box glass-panel max-w-sm w-full rounded-xl p-8">
+    <h3 class="text-lg font-bold mb-4">API Configuration</h3>
+    <input type="text" id="api-url-input" class="form-input mb-6" placeholder="API Gateway URL">
+    <div class="flex gap-4">
+      <button class="bg-brand-primary flex-1 py-2 rounded font-bold text-black" id="save-api-btn">Save</button>
+      <button class="flex-1 py-2 rounded font-bold border border-white/10" onclick="closeModal('settings-overlay')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed bottom-10 right-10 z-[6000] flex flex-col gap-2"></div>
+
+<script src="js/app.js"></script>
+<script src="js/booking.js"></script>
+</body>
+</html>
