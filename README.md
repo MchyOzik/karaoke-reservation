@@ -258,18 +258,20 @@ echo "NeonStage System Online" > /var/www/html/health.html
 
 ## 7. Storage & Security
 
-### 7.1. S3 Payment Proof Bucket
-**CORS Policy JSON:**
+### 7.1. S3 Payment#### 6.2.2. S3 Bucket Policy (Public Access)
 ```json
-[
-  {
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["PUT", "POST", "GET"],
-    "AllowedOrigins": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }
-]
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::S3_BUCKET/*"
+        }
+    ]
+}
 ```
 
 
