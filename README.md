@@ -220,7 +220,6 @@ echo "NeonStage System Online" > /var/www/html/health.html
 | Key | Value |
 | :--- | :--- |
 | `S3_BUCKET` | [S3 Bucket Name] |
-| `AWS_REGION_NAME` | `us-east-1` |
 
 #### 5.2.6. karaoke-lambda-check-slot (Availability Check)
 - **Memory**: 128 MB
@@ -259,12 +258,19 @@ echo "NeonStage System Online" > /var/www/html/health.html
 ## 7. Storage & Security
 
 ### 7.1. S3 Payment Proof Bucket
-**CORS Policy Configuration:**
-- **Allowed Origins**: `*`
-- **Allowed Methods**: `GET`, `PUT`, `POST`, `HEAD`
-- **Allowed Headers**: `*`
-- **Exposed Headers**: `ETag`, `x-amz-request-id`, `x-amz-id-2`
-- **Max Age**: `3000 seconds`
+### 7.1. S3 Payment Proof Bucket
+**CORS Policy (Copy-Paste JSON):**
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": ["ETag", "x-amz-request-id", "x-amz-id-2"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
   
 ### 7.2. S3 Bucket Policy (Public Access)
 ```json

@@ -3,7 +3,7 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 
-s3 = boto3.client('s3', region_name=os.environ['AWS_REGION_NAME'])
+s3 = boto3.client('s3', region_name=os.environ['AWS_REGION'])
 PRESIGN_EXPIRY = 900  # 15 minutes
 
 def cors_response(status_code, body):
@@ -37,7 +37,7 @@ def lambda_handler(event, context):
         import re
         safe_name = re.sub(r'[^a-zA-Z0-9._-]', '_', file_name)
         s3_key = f"payments/{session_token}/{safe_name}"
-        bucket = os.environ['S3_PAYMENT_BUCKET']
+        bucket = os.environ['S3_BUCKET']
 
         presigned_url = s3.generate_presigned_url(
             'put_object',
