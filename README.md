@@ -1,5 +1,43 @@
 # Master Technical Specification: NeonStage Karaoke Reservation System
 
+## 0. Infrastructure Topology (Visual)
+
+```mermaid
+graph TD
+    subgraph Internet ["External Traffic"]
+        User((User))
+    end
+
+    subgraph Public_Zone ["Public Zone (Stack 1)"]
+        ALB["karaoke-alb (Load Balancer)"]
+        IGW["Internet Gateway"]
+    end
+
+    subgraph Private_App_Zone ["Private Application Zone (Stack 1)"]
+        EC2["karaoke-web-server (Nginx)"]
+        Lambda["Backend Logic (7x Python 3.12 Functions)"]
+        NAT["NAT Gateway"]
+    end
+
+    subgraph Isolated_Data_Zone ["Isolated Data Zone (Stack 2)"]
+        RDS[("karaoke-rds-postgres (v15)")]
+        DDB[("karaoke-reservation-session-locks (DynamoDB)")]
+    end
+
+    subgraph Storage ["Storage (Manual/TF)"]
+        S3["karaoke-payment-proofs (S3 Bucket)"]
+    end
+
+    %% Connections
+    User -->|HTTP/80| ALB
+    ALB -->|Forward| EC2
+    EC2 -->|API Calls via APIGW| Lambda
+    Lambda -->|Port 5432| RDS
+    Lambda -->|Atomic Lock| DDB
+    User -->|Presigned Upload| S3
+    Lambda -->|Generate URL| S3
+```
+
 ## 1. Project Overview & Strategy
 
 ### 1.1. Operational Background
