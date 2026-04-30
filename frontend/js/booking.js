@@ -12,6 +12,9 @@ const Booking = {
     const fileInput = document.getElementById('payment-file-input');
     fileInput.onchange = (e) => this.handleUpload(e);
     document.getElementById('upload-zone').onclick = () => fileInput.click();
+    
+    // Auto-load slots when date changes
+    document.getElementById('booking-date').onchange = () => this.initSlots();
   },
 
   openModal(roomId) {

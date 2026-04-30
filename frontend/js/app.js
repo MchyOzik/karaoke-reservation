@@ -1,5 +1,5 @@
 const App = {
-  apiUrl: localStorage.getItem('neonstage_api_url') || '',
+  apiUrl: (window.APP_CONFIG && window.APP_CONFIG.API_GATEWAY_URL) || localStorage.getItem('neonstage_api_url') || '',
   rooms: [],
 
   init() {
